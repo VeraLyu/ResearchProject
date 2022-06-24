@@ -6,6 +6,7 @@ import typing
 import matplotlib.pyplot as plt
 import mpl_finance as mpf
 import numpy as np
+from Helper import DrawHelper
 
 
 # 获取所有股票列表
@@ -79,7 +80,6 @@ def FindReversal(stockMA, reversalDay=8):
     compareCount = 0
     # 日期列表
     seriesTdateList = list()
-    #seriesCloseList = list()
     # 详情列表
     seriesList = list()
     OrderDic = typing.OrderedDict()
@@ -87,23 +87,18 @@ def FindReversal(stockMA, reversalDay=8):
         # 从下跌趋势开始时，记录本次趋势内数据
         if float(stockMAValue["ma10"]) <= float(stockMAValue["ma20"]):
             seriesTdateList.append(stockMAValue["tdate"])
-            #seriesCloseList.append(stockMAValue["close"])
             seriesList.append([stockMAValue["open"],stockMAValue["high"],stockMAValue["low"],stockMAValue["close"]])
             compareCount += 1
         # 遇到死叉，如果本次下跌趋势满足，就进行记录,若记录当天信息，在此处添加即可
         if float(stockMAValue["ma10"]) > float(stockMAValue["ma20"]):
             if compareCount > reversalDay:
-                print(stockMAValue["tdate"])
-                print(seriesTdateList)
-                #print(seriesCloseList[-reversalDay])
                 OrderDic[stockMAValue["tdate"]] = {"tdateList":seriesTdateList, "seriesList":seriesList}
                 seriesTdateList = list()
-                #seriesCloseList = list()
                 seriesList = list()
             compareCount = 0
     listIndex = list(OrderDic.keys())
     # 返回用于作图的数据
-    DrawDataK(OrderDic[listIndex[0]]["tdateList"][-reversalDay:], OrderDic[listIndex[0]]["seriesList"][-reversalDay:])
+    DrawHelper.DrawDataK(OrderDic[listIndex[0]]["tdateList"][-reversalDay:], OrderDic[listIndex[0]]["seriesList"][-reversalDay:])
 
 # 主函数
 if __name__ == '__main__':
