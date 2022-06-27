@@ -18,20 +18,26 @@ def DrawDataK1(dates, prices):
     plt.savefig('D:\\导出的图片.png')
     #plt.show()
 
-def DrawDataK(dates, prices):
-    #prices = data[['open', 'high', 'low', 'close']]
-    #dates = data['date']
+def DrawDataK(dates, prices, path='D:\\导出的图片.png'):
     candleData = np.column_stack([list(range(len(dates))), prices])
     fig = plt.figure(figsize=(10, 6))
     ax = fig.add_axes([0.1, 0.3, 0.8, 0.6])
     plt.axis('off')
     mpf.candlestick_ohlc(ax, candleData, width=0.5, colorup='r', colordown='b')
-    plt.savefig('D:\\导出的图片.png')
+    plt.savefig(path)
+    plt.close()
 
 # 主函数
 if __name__ == '__main__':
     data = ts.get_k_data('002153', ktype='D', autype='qfq', start='2021-12-17', end='')
     print(data)
+
+    # 调用方法
+    dates = data['date']
+    prices = data[['open', 'high', 'low', 'close']]
+    DrawDataK(dates, prices, path='D:\\导出的图片.png')
+
+
     prices = data[['open', 'high', 'low', 'close']]
     dates = data['date']
     candleData = np.column_stack([list(range(len(dates.values.tolist()))), prices.values.tolist()])
