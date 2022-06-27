@@ -92,15 +92,15 @@ def FindReversal(stockMA, reversalDay=8):
         if float(stockMAValue["ma10"]) > float(stockMAValue["ma20"]):
             if compareCount > reversalDay:
                 # 寻找区间最低点的位置
-                featureList = np.array(seriesList)[:,0].tolist()
+                featureList = np.array(seriesList)[:,3].tolist()
                 featureList.reverse()
                 minIndex = featureList.index(min(featureList))
                 theIndex = len(featureList)-minIndex-1
                 #featureList.reverse()
                 # 只存储最低点之前的序列
                 OrderDic[stockMAValue["tdate"]] = {"tdateList":seriesTdateList[:theIndex+1], "seriesList":seriesList[:theIndex+1]}
-                seriesTdateList = list()
-                seriesList = list()
+            seriesTdateList = list()
+            seriesList = list()
             compareCount = 0
     return OrderDic
 
@@ -152,7 +152,7 @@ if __name__ == '__main__':
             # 找到反转模式区间
             reversalDic = FindReversal(stockMADic, reversalDay)
             # 生成反转模式区间的图片
-            SavePicture(code, reversalDic, reversalDay, reversalDayOffset)
+            SavePicture(code, reversalDic, reversalDay, reversalDayOffset, dirPath)
             dataCount += 1
             if dataCount == 500:
                 time.sleep(60)

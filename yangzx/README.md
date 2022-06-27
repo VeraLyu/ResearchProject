@@ -16,9 +16,13 @@
 ```  
 
 ## 二、Helper 
-### 1.生成图片的类库（DrawHelper）  
+### 1.生成图片类库（DrawHelper）  
 ```
   1.DrawHelper.py 
+```  
+### 2.压缩文件类库（ZipHelper）  
+```
+  1.ZipHelper.py 
 ```  
 
 ## 三、Strategy  
