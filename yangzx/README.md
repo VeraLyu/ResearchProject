@@ -8,9 +8,22 @@
   2.FindReversalPattern_只生成最低点.py 
 ```  
 
-### 2.**模式（reversal）  
-+ ***存放生成**模式图像的程序***  
+### 2.XX模式（reversal）  
++ ***存放生成XX模式图像的程序***  
 ```
-  1.***.py 
-  2.***.py 
+  1.XX.py 
+  2.XX.py 
+```  
+
+## 二、Helper 
+### 1.生成图片的类库（DrawHelper）  
+```
+  1.DrawHelper.py 
+```  
+
+## 三、Strategy  
+### 1.策略文件夹（Strategy）  
+```
+  1.MA.py 
+  2.REF.py 
 ```  

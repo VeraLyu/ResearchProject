@@ -4,11 +4,16 @@ import time
 import typing
 import zipfile
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import mpl_finance as mpf
 import numpy as np
+#from Helper import DrawHelper
+
+sys.path.append('..\..')
 from Helper import DrawHelper
+from Helper import ZipHelper
 
 # 寻找反转模式
 # 1. ma10 连续在 ma20下 n 天后，首次出现交叉，获取这样的区间数据（不包含交叉当天）
@@ -119,11 +124,11 @@ def zipDir(dirpath='v1.0', outFullName='v1.0.zip'):
     :return: 无
     """
     outFullName = "..\\..\\..\\Communal\\ReversalPicture.zip"
+    dirpath = "..\\..\\..\\Communal\\ReversalPictureImg"
     with zipfile.ZipFile(outFullName, "w", zipfile.ZIP_DEFLATED) as zf:
-        dirpath = "..\\..\\..\\Communal\\ReversalPictureImg"
         for path, dirnames, filenames in os.walk(dirpath):
             # 去掉目标跟路径，只对目标文件夹下边的文件及文件夹进行压缩
-            fpath = path.replace(dirpath, '')
+            #fpath = path.replace(dirpath, '')
             fpath = dirpath
             for filename in filenames:
                 zf.write(os.path.join(path, filename), os.path.join(fpath, filename))
@@ -133,7 +138,9 @@ def zipDir(dirpath='v1.0', outFullName='v1.0.zip'):
 
 # 主函数
 if __name__ == '__main__':
-    zipDir()
+    outFullName = "..\\..\\..\\Communal\\ReversalPicture.zip"
+    dirpath = "..\\..\\..\\Communal\\ReversalPictureImg"
+    #zipDir(dirpath, outFullName)
     # 生成策略结果数据
     tagDic = dict()
     # 循环计数器
