@@ -2,19 +2,17 @@ import tushare as ts
 import datetime as dt
 import time
 import typing
-import zipfile
-import os
 import sys
 
 import matplotlib.pyplot as plt
 import mpl_finance as mpf
 import numpy as np
-#from Helper import DrawHelper
 
 sys.path.append('..\..')
 from Helper import DrawHelper
 from Helper import ZipHelper
 
+""""
 # 寻找反转模式
 # 1. ma10 连续在 ma20下 n 天后，首次出现交叉，获取这样的区间数据（不包含交叉当天）
 # 2. 在交叉日区间中，找到最低点对应的日期
@@ -26,7 +24,8 @@ from Helper import ZipHelper
 # 2.若最低点后的 m 个交易日涨幅达到x，即为所求 
 # or
 # 1.在交叉日期后，向后取 m 个交易日
-# 2.若连续 m 天 ma10 > ma20，即为所求 
+# 2.若连续 m 天 ma10 > ma20，即为所求
+"""
 
 # 获取所有股票列表
 def GetAllStockList():
@@ -106,41 +105,21 @@ def FindReversal(stockMA, reversalDay=8):
     return OrderDic
 
 # 画出每个符合要求的图
-def SavePicture(code, orderDic):
-    for item in orderDic.values():
+def SavePicture(code, dataDic, reversalDay, reversalDayOffset, dirPath=''):
+    if dirPath == '':
+        dirPath = sys.path[0]
+        print("缺少保存路径，默认保存至当前文件夹下")
+    for item in dataDic.values():
         if len(item["tdateList"]) > reversalDay - reversalDayOffset:
             tdateList = item["tdateList"][-reversalDay+reversalDayOffset:]
             priceList = item["seriesList"][-reversalDay+reversalDayOffset:]
-            path = "..\\..\\..\\Communal\\ReversalPictureImg\\"+code+"_"+item["tdateList"][0]+".png"
+            path = dirPath + "\\" + code + "_" + item["tdateList"][0] + ".png"
             DrawHelper.DrawDataK(tdateList, priceList, path)
         else:
-            pass
-
-def zipDir(dirpath='v1.0', outFullName='v1.0.zip'):
-    """
-    压缩指定文件夹
-    :param dirpath: 目标文件夹路径
-    :param outFullName: 压缩文件保存路径+xxxx.zip
-    :return: 无
-    """
-    outFullName = "..\\..\\..\\Communal\\ReversalPicture.zip"
-    dirpath = "..\\..\\..\\Communal\\ReversalPictureImg"
-    with zipfile.ZipFile(outFullName, "w", zipfile.ZIP_DEFLATED) as zf:
-        for path, dirnames, filenames in os.walk(dirpath):
-            # 去掉目标跟路径，只对目标文件夹下边的文件及文件夹进行压缩
-            #fpath = path.replace(dirpath, '')
-            fpath = dirpath
-            for filename in filenames:
-                zf.write(os.path.join(path, filename), os.path.join(fpath, filename))
-    zf.close()
-    print("文件夹\"{0}\"已压缩为\"{1}\".".format(dirpath, outFullName))
-
+            print(code,":数据量不足","，不生成图片")
 
 # 主函数
 if __name__ == '__main__':
-    outFullName = "..\\..\\..\\Communal\\ReversalPicture.zip"
-    dirpath = "..\\..\\..\\Communal\\ReversalPictureImg"
-    #zipDir(dirpath, outFullName)
     # 生成策略结果数据
     tagDic = dict()
     # 循环计数器
@@ -151,10 +130,10 @@ if __name__ == '__main__':
     reversalDay = 21
     # 提取趋势区间长度偏移量，剔除最低点右侧数据后，序列提取长度应相对缩短
     reversalDayOffset = 5
-    # 获取均线数据
-    #stockMADic = GetStockMA('000001.SZ')
-    # 找到反转模式区间
-    #OrderDic = FindReversal(stockMADic, reversalDay)
+    # 压缩文件源路径
+    dirPath = "..\\..\\..\\Communal\\ReversalPictureImg"
+    # 压缩文件生成路径
+    imgOutFullName = "..\\..\\..\\Communal\\ReversalPicture.zip"
 
     # 获取股票池 上证50:000016.SH 沪深300:399300.SZ 上证180：000010.SH
     stockPoolList = GetStockPool('000016.SH')
@@ -163,36 +142,42 @@ if __name__ == '__main__':
         if len(stockPoolList) > 0 and code not in stockPoolList:
             continue
         # 获取均线数据
-        #stockMADic = GetStockMA('000001.SZ')
-        tag = GetStockMA(code)
+        stockMADic = GetStockMA(code)
         
         if dataCount > sampleCount:
             break
-        elif tag == False:
+        elif stockMADic == False:
             continue
         else:
             # 找到反转模式区间
-            orderDic = FindReversal(tag, reversalDay)
-            # 保存图片
-            SavePicture(code, orderDic)
+            reversalDic = FindReversal(stockMADic, reversalDay)
+            # 生成反转模式区间的图片
+            SavePicture(code, reversalDic, reversalDay, reversalDayOffset)
             dataCount += 1
             if dataCount == 500:
                 time.sleep(60)
     
+    # 压缩生成图片的文件夹
+    ZipHelper.ZipDir(dirPath, imgOutFullName)
+
+
+
+
+
 
     print("finish")
     input()
-    OrderDic = 0
+    reversalDic = 0
     # 返回用于作图的数据
-    testOne = list(OrderDic.keys())[0]
-    if len(OrderDic[testOne]["tdateList"]) > reversalDay - reversalDayOffset:
-        DrawHelper.DrawDataK(OrderDic[testOne]["tdateList"][-reversalDay+reversalDayOffset:], OrderDic[testOne]["seriesList"][-reversalDay+reversalDayOffset:])
+    testOne = list(reversalDic.keys())[0]
+    if len(reversalDic[testOne]["tdateList"]) > reversalDay - reversalDayOffset:
+        DrawHelper.DrawDataK(reversalDic[testOne]["tdateList"][-reversalDay+reversalDayOffset:], reversalDic[testOne]["seriesList"][-reversalDay+reversalDayOffset:])
     else:
         pass
 
 
     # 画出每个符合要求的图
-    for item in OrderDic.values():
+    for item in reversalDic.values():
         if len(item["tdateList"]) > reversalDay - reversalDayOffset:
             tdateList = item["tdateList"][-reversalDay+reversalDayOffset:]
             priceList = item["seriesList"][-reversalDay+reversalDayOffset:]
@@ -201,6 +186,6 @@ if __name__ == '__main__':
         else:
             pass
 
-    #DrawHelper.DrawDataK(OrderDic[listIndex[0]]["tdateList"], OrderDic[listIndex[0]]["seriesList"])
+    #DrawHelper.DrawDataK(reversalDic[listIndex[0]]["tdateList"], reversalDic[listIndex[0]]["seriesList"])
 
 
