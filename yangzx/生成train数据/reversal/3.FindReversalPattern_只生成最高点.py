@@ -107,7 +107,7 @@ def FindReversal(stockMA, reversalDay=8):
 
 # 画出每个符合要求的图
 def SavePicture(code, dataDic, reversalDay, reversalDayOffset, dirPath=''):
-    if dirPath == '':
+    if dirPath == '' or not os.path.exists(dirPath):
         dirPath = sys.path[0]
         print("缺少保存路径，默认保存至当前文件夹下")
     for item in dataDic.values():
@@ -121,7 +121,6 @@ def SavePicture(code, dataDic, reversalDay, reversalDayOffset, dirPath=''):
 
 # 主函数
 if __name__ == '__main__':
-    print(os.path.exists("..\\..\\..\\Communal\\ReversalNegative1"))
     # 生成策略结果数据
     tagDic = dict()
     # 循环计数器

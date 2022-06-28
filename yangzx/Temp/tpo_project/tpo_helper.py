@@ -15,8 +15,10 @@ def get_ticksize(data, freq=30):
     numlen = int(len(data)/2)
     # sample size for calculating ticksize = 50% of most recent data
     tztail = data.tail(numlen).copy()
-    tztail['tz'] = tztail.Close.rolling(freq).std()  # std. dev of 30 period rolling
+    # 以30天为窗口生成均值
+    tztail['tz'] = tztail.Close.rolling(freq).std()
     tztail = tztail.dropna()
+    # 收盘价标准差的均值的0.25倍，向上取整
     ticksize = np.ceil(tztail['tz'].mean()*0.25)  # 1/4 th of mean std. dev is our ticksize
 
     if ticksize < 0.2:
@@ -351,7 +353,7 @@ def get_contextnow(mean_val, ranking):
 
     return ibrankdf
 
-
+# 判断相邻两值的大小，用（1，-1）表示，最后合并
 def get_rf(df):
     df['cup'] = np.where(df['Close'] >= df['Close'].shift(), 1, -1)
     df['hup'] = np.where(df['High'] >= df['High'].shift(), 1, -1)
@@ -364,6 +366,7 @@ def get_rf(df):
 
 def get_mean(dfhist, avglen=30, freq=30):
     dfhist = get_rf(dfhist.copy())
+    # 对分钟级的数据进行日采样，采样规则见agg
     dfhistd = dfhist.resample("D").agg(
         {'symbol': 'last', 'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum',
          'rf': 'sum', })
@@ -371,8 +374,10 @@ def get_mean(dfhist, avglen=30, freq=30):
     comp_days = len(dfhistd)
 
     vm30 = dfhistd['Volume'].rolling(avglen).mean()
+    print(vm30)
     volume_mean = vm30[len(vm30) - 1]
     rf30 = (dfhistd['rf']).rolling(avglen).mean()
+    print(rf30)
     rf_mean = rf30[len(rf30) - 1]
 
     date2 = dfhistd.index[1].date()

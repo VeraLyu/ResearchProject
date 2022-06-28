@@ -22,7 +22,8 @@ display = 5
 freq = 30
 avglen = 10  # num days mean to get values
 mode = 'tpo'  # for volume --> 'vol'
-dfhist = pd.read_csv(r'C:\Users\alex1\Dropbox\scripts\tpo_v2\history.txt')
+#dfhist = pd.read_csv(r'C:\Users\alex1\Dropbox\scripts\tpo_v2\history.txt')
+dfhist = pd.read_csv("..\\history.txt")
 dfhist.iloc[:, 2:] = dfhist.iloc[:, 2:].apply(pd.to_numeric)
 
 

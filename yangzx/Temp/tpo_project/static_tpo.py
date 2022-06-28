@@ -13,6 +13,7 @@ from tpo_helper import get_ticksize, abc, get_mean, get_rf, get_context, get_con
 import numpy as np
 from datetime import timedelta
 from plotly.offline import plot
+import plotly.io as pio
 
 freq = 30
 avglen = 10  # num days mean to get values
@@ -21,15 +22,15 @@ mode = 'tpo'  # for volume --> 'vol'
 
 # 1 min historical data. For static plots it needs to be up to date.
 dfhist = pd.read_csv('history.txt')
-
 # Check the sample file. Match the format exactly else code will not run.
 
 dfhist.iloc[:, 2:] = dfhist.iloc[:, 2:].apply(pd.to_numeric)
 
-# # It calculates tick size for TPO based on mean and standard deviation.
+# It calculates tick size for TPO based on mean and standard deviation.
+# 根据平均值和标准偏差计算TPO的刻度大小
 ticksz = get_ticksize(dfhist, freq=freq)
 symbol = dfhist.symbol[0]
-
+print(symbol)
 
 def datetime(dfhist):
     """
@@ -43,6 +44,7 @@ def datetime(dfhist):
 
 
 dfhist = datetime(dfhist)
+
 # Get mean values for context and also get daily trading hours
 mean_val = get_mean(dfhist, avglen=avglen, freq=freq)
 trading_hr = mean_val['session_hr']
@@ -210,4 +212,6 @@ fig["layout"]["xaxis"]["tickformat"] = "%H:%M:%S"
 #     f.write(scope.transform(fig, format="png"))
 
 plot(fig, auto_open=True)
+pio.write_image(fig, '1.png')
+#fig.write_image("name.eps", width=1920, height=1080)
 fig.show()

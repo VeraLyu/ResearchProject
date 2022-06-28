@@ -3,6 +3,7 @@ import datetime as dt
 import time
 import typing
 import sys
+import os
 
 import matplotlib.pyplot as plt
 import mpl_finance as mpf
@@ -106,7 +107,7 @@ def FindReversal(stockMA, reversalDay=8):
 
 # 画出每个符合要求的图
 def SavePicture(code, dataDic, reversalDay, reversalDayOffset, dirPath=''):
-    if dirPath == '':
+    if dirPath == '' or not os.path.exists(dirPath):
         dirPath = sys.path[0]
         print("缺少保存路径，默认保存至当前文件夹下")
     for item in dataDic.values():
