@@ -30,7 +30,6 @@ dfhist.iloc[:, 2:] = dfhist.iloc[:, 2:].apply(pd.to_numeric)
 # 根据平均值和标准偏差计算TPO的刻度大小
 ticksz = get_ticksize(dfhist, freq=freq)
 symbol = dfhist.symbol[0]
-print(symbol)
 
 def datetime(dfhist):
     """
@@ -49,26 +48,32 @@ dfhist = datetime(dfhist)
 mean_val = get_mean(dfhist, avglen=avglen, freq=freq)
 trading_hr = mean_val['session_hr']
 # !!! get rotational factor
+# 计算rf
 dfhist = get_rf(dfhist.copy())
-# !!! resample to desire time frequency. For TPO charts 30 min is optimal
-dfhist = dfhist.resample(str(freq)+'min').agg({'symbol': 'last', 'datetime': 'first', 'Open': 'first', 'High': 'max',
-                                               'Low': 'min', 'Close': 'last', 'Volume': 'sum', 'rf': 'sum'})
+# 按照30分钟进行采样
+dfhist = dfhist.resample(str(freq)+'min').agg({'symbol': 'last', 'datetime': 'first', 'Open': 'first', 'High': 'max','Low': 'min', 'Close': 'last', 'Volume': 'sum', 'rf': 'sum'})
 dfhist = dfhist.dropna()
 
+
 # slice df based on days_to_display parameter
+# 有30天的数据（6.30-7.30），只取后10天（7.20-7.30）
 dt1 = dfhist.index[-1]
 sday1 = dt1 - timedelta(days_to_display)
 dfhist = dfhist[(dfhist.index.date > sday1.date())]
 
-# !!! split the dataframe with new date
+
+# 将10天的30min采样数据按天切片
 DFList = [group[1] for group in dfhist.groupby(dfhist.index.date)]
 # !!! for context based bubbles at the top with text hovers
-dfcontext = get_context(dfhist, freq=freq, ticksize=ticksz, style=mode, session_hr=trading_hr)
+# 对于顶部带有文本悬停的基于上下文的气泡
+dfcontext = get_context(DFList, freq=freq, ticksize=ticksz, style=mode, session_hr=trading_hr)
 #  get market profile DataFrame and ranking as a series for each day.
+# 获取市场概况数据框架，并将其作为每天的一个系列进行排名。
 # @todo: IN next version, display the ranking DataFrame with drop-down menu
 dfmp_list = dfcontext[0]
 ranking = dfcontext[1]
 # !!! get context based on IB It is predictive value caculated by using various IB stats and previous day's value area
+# 基于IB获取上下文它是使用各种IB统计数据和前一天的值区域计算的预测值
 # IB is 1st 1 hour of the session. Not useful for scrips with global 24 x 7 session
 context_ibdf = get_contextnow(mean_val, ranking)
 ibpower = context_ibdf.power  # Non-normalised IB strength
@@ -96,8 +101,7 @@ for i in range(len(dfmp_list)):  # test the loop with i=1
     # df_mp['i_date'] = df1['datetime'][0]
     df_mp['i_date'] = irank.date
     # # @todo: background color for text
-    df_mp['color'] = np.where(np.logical_and(
-        df_mp['close'] > irank.vallist, df_mp['close'] < irank.vahlist), 'green', 'white')
+    df_mp['color'] = np.where(np.logical_and(df_mp['close'] > irank.vallist, df_mp['close'] < irank.vahlist), 'green', 'white')
 
     df_mp = df_mp.set_index('i_date', inplace=False)
 
@@ -197,7 +201,7 @@ fig.update_xaxes(title_text='Time', title_font=dict(size=18, color='white'),
 
 fig.update_yaxes(title_text=symbol, title_font=dict(size=18, color='white'),
                  tickfont=dict(size=12, color='white'), showgrid=False)
-fig.layout.update(template="plotly_dark", title="@"+abc()[1], autosize=True,
+fig.layout.update(template="plotly_dark", title="@test", autosize=True,
                   xaxis=dict(showline=True, color='white'), yaxis=dict(showline=True, color='white'))
 
 fig["layout"]["xaxis"]["rangeslider"]["visible"] = False

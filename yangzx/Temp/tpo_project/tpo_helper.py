@@ -39,13 +39,8 @@ def abc(session_hr=6.5, freq=30):
             (np.ceil((alimit - 52) / 52)) + 1)  # if bar frequency is less than 30 minutes then multiply list
     else:
         alphabets = Aa[0:alimit]
-    bk = [28, 31, 35, 40, 33, 34, 41, 44, 35, 52, 41, 40, 46, 27, 38]
-    ti = []
-    for s1 in bk:
-        ti.append(Aa[s1 - 1])
-    tt = (''.join(ti))
 
-    return (alphabets, tt)
+    return alphabets
 
 
 def tpo(dft_rs, freq=30, ticksize=10, style='tpo', session_hr=6.5):
@@ -58,7 +53,7 @@ def tpo(dft_rs, freq=30, ticksize=10, style='tpo', session_hr=6.5):
         dft_rs['ext_up'] = dft_rs['rol_mn'] > dft_rs['rol_mx'].shift(2)
         dft_rs['ext_dn'] = dft_rs['rol_mx'] < dft_rs['rol_mn'].shift(2)
 
-        alphabets = abc(session_hr, freq)[0]
+        alphabets = abc(session_hr, freq)
         alphabets = alphabets[0:len(dft_rs)]
         hh = dft_rs['High'].max()
         ll = dft_rs['Low'].min()
@@ -210,7 +205,7 @@ def get_context(df_hi, freq=30, ticksize=5, style='tpo', session_hr=6.5):
     #    df_hi=df.copy()
     try:
 
-        DFcontext = [group[1] for group in df_hi.groupby(df_hi.index.date)]
+        DFcontext = df_hi
         dfmp_l = []
         i_poctpo_l = []
         i_tposum = []
@@ -232,8 +227,8 @@ def get_context(df_hi, freq=30, ticksize=5, style='tpo', session_hr=6.5):
         ll_l = []
         range_l = []
 
-        for c in range(len(DFcontext)):  # c=1 for testing
-            dfc1 = DFcontext[c].copy()
+        for i in range(len(DFcontext)):  # c=1 for testing
+            dfc1 = DFcontext[i].copy()
             dfc1.iloc[:, 2:6] = dfc1.iloc[:, 2:6].apply(pd.to_numeric)
 
             dfc1 = dfc1.reset_index(inplace=False, drop=True)
