@@ -5,23 +5,6 @@ An implementation of GhostNet for Tensorflow 2.0+ (From the paper "GhostNet: Mor
 
 Link to paper: https://arxiv.org/pdf/1911.11907.pdf
 
-## Using Ghostnet
-
-This implementation is a normal Keras Model object.
-You initialize it, build or compile it and it is ready to fit!
-
-Dummy example:
-```
-from ghost_model import GhostNet
-
-# Initialize model with 10 classes
-model = GhostNet(10)
-
-# Compile and fit
-model.compile(loss='categorical_crossentropy', 
-              optimizer='adam', metrics=['accuracy']) 
-model.fit(data)
-
-```
-
-Check out the Jupyter notebook "mnist_example.ipynb" in this repository for an example of using this implementation on a real dataset.
+这个代码出现了一点问题，训练正确率能达到100%，但是测试时预测结果每一个都一样，大家帮忙看一下，非常感谢！
+数据集在另一个文件夹里面，/dataset,直接复制到这个主文件夹里面就可以用。
+运行 ： python main.py  --nets=ghostnet  --batch_size=32   --lr=0.001   --epochs=10
