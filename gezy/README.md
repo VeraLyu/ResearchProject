@@ -6,6 +6,6 @@
 
 ### 1.tpo_project
 
-# 一、CreateTrainData
+# 二、CreateTrainData
 
 ## 生成tpo灰色图像数据
