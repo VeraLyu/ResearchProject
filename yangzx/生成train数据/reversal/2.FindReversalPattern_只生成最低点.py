@@ -134,7 +134,7 @@ if __name__ == '__main__':
     # 压缩文件源路径
     dirPath = "..\\..\\..\\Communal\\ReversalPositive"
     # 压缩文件生成路径
-    imgOutFullName = "..\\..\\..\\Communal\\ReversalPositive.zip"
+    imgOutFullName = "..\\..\\..\\Communal\\ReversalPositive{0}.zip".format(time.strftime("%Y%m%d"))
 
     # 获取股票池 上证50:000016.SH 沪深300:399300.SZ 上证180：000010.SH
     stockPoolList = GetStockPool('000016.SH')
