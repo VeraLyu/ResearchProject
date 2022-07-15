@@ -15,13 +15,15 @@ from Helper import ZipHelper
 
 """"
 # 寻找反转模式
+# 目标：出死叉后，找到最高点，判断最高点后chgDayCount日最大跌幅是否达到预期，达到预期则选出来
 # 1. ma10 连续在 ma20 上 n 天后，首次出现交叉，获取这样的区间数据（不包含交叉当天）
 # 2. 在交叉日区间中，找到最高点对应的日期
-# 3 从最高点向未来取p个交易日，判断跌幅是否达到x
+# 3. 从最高点向未来取p个交易日，判断从最高位起，跌幅是否达到x%，若达到则为所求
 # 4. 从最高点向前取 m 个交易日
 # 5. 记录股票代码、日期区间、价格区间，输出区间数据的图像
 
 # 后续改进：
+目标：出现死叉后，找到死叉出现之后的n日最大跌幅是否达到预期，达到预期则选出来
 # 1.在交叉日期后，向后取 m 个交易日
 # 2.若连续 m 天 ma10 < ma20，即为所求
 """
@@ -73,14 +75,20 @@ def GetStockMA(stockCode, period=1401, maPara=[10, 20], calDay=100, type="D", be
     return OrderDic
 
 # 判断反转模式
-def FindReversal(stockMA, reversalDay=8):
+def FindReversal(stockMA, reversalDay=8, chgDayCount=5, pchg=0.15):
     # 连续趋势计数
     compareCount = 0
+    # 全局循环计数器
+    globleCount = 0
     # 日期列表
     seriesTdateList = list()
     # 交易数据列表
     seriesList = list()
     orderDic = typing.OrderedDict()
+    # 字典转列表
+    dicToList = list()
+    # 将整个有序字典转换成数组，方便后续根据下标取值
+    dicToList = list(stockMA.values())
     for stockMAKey, stockMAValue in stockMA.items():
         # 从首次上涨趋势开始时，记录本次趋势内序列
         if float(stockMAValue["ma10"]) >= float(stockMAValue["ma20"]):
@@ -90,17 +98,27 @@ def FindReversal(stockMA, reversalDay=8):
         # 遇到死叉本轮趋势终止，若本轮上涨趋势满足趋势时长，在orderDic添加本轮趋势序列（默认不记录交叉当天信息，若记录交叉当天信息，在此处添加即可）
         if float(stockMAValue["ma10"]) < float(stockMAValue["ma20"]):
             if compareCount > reversalDay:
-                # 寻找区间最高点的位置
+                # 寻找区间最高点K线对应收盘价的日期，在序列中的位置
                 featureList = np.array(seriesList)[:,3].tolist()
+                # 反转序列，以便找到featureList区间内最大值的位置下标
                 featureList.reverse()
                 maxIndex = featureList.index(max(featureList))
                 theIndex = len(featureList)-maxIndex-1
-                #featureList.reverse()
-                # 只存储最高点之前的序列
-                orderDic[stockMAValue["tdate"]] = {"tdateList":seriesTdateList[:theIndex+1], "seriesList":seriesList[:theIndex+1]}
+                
+                # 判断最高点向未来chgDayCount天是否越界
+                if (globleCount - (len(featureList) - theIndex) + chgDayCount) <= len(dicToList) - 1:
+                    # 从最高点向未来取chgDayCount个交易日收盘价，计入chgList，计算跌幅
+                    chgList = list()
+                    for count in range(chgDayCount):
+                        # 从最高点向未来chgDayCount天的价格序列=(金叉日位置-(区间总长-最高点位置)+i)
+                        chgList.append(dicToList[globleCount - (len(featureList) - theIndex) + count]['close'])
+                    # 如果跌幅达标 只存储最高点及历史部分的序列
+                    if ((chgList[0] - min(chgList)) / chgList[0]) >= pchg:
+                        orderDic[stockMAValue["tdate"]] = {"tdateList":seriesTdateList[:theIndex+1], "seriesList":seriesList[:theIndex+1]}
             seriesTdateList = list()
             seriesList = list()
             compareCount = 0
+        globleCount += 1
     return orderDic
 
 # 画出每个符合要求的图
@@ -127,6 +145,10 @@ if __name__ == '__main__':
     sampleCount = 50
     # 提取趋势区间序列长度
     reversalDay = 21
+    # 后续涨跌幅计算区间
+    chgCount = 8
+    # 目标波动幅度
+    pchg = 0.15
     # 提取趋势区间长度偏移量，剔除最低点右侧数据后，序列提取长度应相对缩短
     reversalDayOffset = 5
     # 压缩文件源路径
@@ -149,7 +171,7 @@ if __name__ == '__main__':
             continue
         else:
             # 找到反转模式区间
-            reversalDic = FindReversal(stockMADic, reversalDay)
+            reversalDic = FindReversal(stockMADic, reversalDay, chgCount, pchg)
             # 生成反转模式区间的图片
             SavePicture(code, reversalDic, reversalDay, reversalDayOffset, dirPath)
             dataCount += 1
@@ -166,25 +188,4 @@ if __name__ == '__main__':
 
     print("finish")
     input()
-    reversalDic = 0
-    # 返回用于作图的数据
-    testOne = list(reversalDic.keys())[0]
-    if len(reversalDic[testOne]["tdateList"]) > reversalDay - reversalDayOffset:
-        DrawHelper.DrawDataK(reversalDic[testOne]["tdateList"][-reversalDay+reversalDayOffset:], reversalDic[testOne]["seriesList"][-reversalDay+reversalDayOffset:])
-    else:
-        pass
-
-
-    # 画出每个符合要求的图
-    for item in reversalDic.values():
-        if len(item["tdateList"]) > reversalDay - reversalDayOffset:
-            tdateList = item["tdateList"][-reversalDay+reversalDayOffset:]
-            priceList = item["seriesList"][-reversalDay+reversalDayOffset:]
-            path = "..\\..\\..\\Communal\\ReversalPicture\\"+item["tdateList"][0]+".png"
-            DrawHelper.DrawDataK(tdateList, priceList, path)
-        else:
-            pass
-
-    #DrawHelper.DrawDataK(reversalDic[listIndex[0]]["tdateList"], reversalDic[listIndex[0]]["seriesList"])
-
 
