@@ -46,7 +46,7 @@ df_norm = round(df_x, 2)
 # print(df_norm.values)
 #input()
 
-DataToImage(df_norm)
+DataToImage(df_norm.values[:,2:],[])
 
 
 

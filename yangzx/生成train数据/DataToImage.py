@@ -1,42 +1,53 @@
 # DataToImage()函数封装
 import matplotlib.pyplot as plt
-
-def DataToImage(df_norm):
-    allDataList = df_norm.values     # 归一化后的数据df_norm
-    fiveDayCount = 0  # 天数计数
-    allCount = 0  # 每5天，allCount+1
-    allList = list()
-    fiveDayList = list()
-    for dataListItem in allDataList:
-        fiveDayCount += 1
-        fiveDayList.append([dataListItem[2], dataListItem[3]])  # 取归一化后的最高价和最低价
-        if fiveDayCount % 5 == 0:  # 每5天，为一个list列表
-            allList.append(fiveDayList)
-            fiveDayList = list()  # 每5天，清空fiveDayList列表
-        if allCount > 5:
+import collections
+def DataToImage(baseDataList, extendData):
+    # 归一化后的价格数据
+    allDataList = baseDataList
+    # 单位钟形图区间天数
+    nuitDayCount = 5
+    # 循环计数器
+    calDayCount = 0
+    # 钟形图展示数量
+    showCount = 0
+    # 钟形图序列集合
+    allNuitList = list()
+    # 单个钟形图序列
+    unitDayList = list()
+    for baseDataItem in baseDataList:
+        calDayCount += 1
+        # 记录区间内的最高价和最低价
+        unitDayList.append([baseDataItem[0], baseDataItem[1]])
+        # 存储一个完整的钟形图
+        if calDayCount % nuitDayCount == 0:
+            allNuitList.append(unitDayList)
+            showCount += 1
+            unitDayList = list()
+        if showCount >= 3:
             break
 
-    # dicc = OrderedDict()
-
+    # 轮廓标记
     tDic = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E'}
-    fiveDic = dict()
+    unitDic = collections.OrderedDict()
     resultList = list()
-    for listItem in allList:
+    # 遍历钟形图序列集合
+    for allNuitItem in allNuitList:
         numCount = 0
-        for item in listItem:
+        for item in allNuitItem:
+            # 最小值
             little = int(item[1] * 100)
             big = int(item[0] * 100)
             drawList = list()
             for num in range(little, big + 1):
-                if num in fiveDic:
-                    fiveDic[num].append(tDic[numCount])
+                if num in unitDic:
+                    unitDic[num].append(tDic[numCount])
                 else:
                     drawList = list()
                     drawList.append(tDic[numCount])
-                    fiveDic[num] = drawList
+                    unitDic[num] = drawList
             numCount += 1
-        resultList.append(fiveDic)
-        fiveDic = dict()
+        resultList.append(unitDic)
+        unitDic = collections.OrderedDict()
 
     color_dic = {
         "A": "#E8E8E8",
@@ -71,3 +82,4 @@ def DataToImage(df_norm):
     plt.axis('off')  # 不显示坐标轴
     # ax.legend()  # 显示图例
     plt.show()
+    input()
