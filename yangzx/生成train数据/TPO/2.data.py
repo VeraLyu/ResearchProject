@@ -1,6 +1,6 @@
 from typing import OrderedDict
 import tushare as ts
-from DataToImage import DataToImage
+from DataToImage import DrawTPOImage
 
 
 # 获取tushare的token
@@ -46,7 +46,7 @@ df_norm = round(df_x, 2)
 # print(df_norm.values)
 #input()
 
-DataToImage(df_norm.values[:,2:],[])
+DrawTPOImage(df_norm.values[:,2:],[])
 
 
 

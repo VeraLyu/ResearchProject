@@ -5,14 +5,17 @@
 + ***存放生成反转模式图像的程序***  
 ```
   1.FindReversalPattern_生成趋势结束.py 
-  2.FindReversalPattern_只生成最低点.py 
+  2.FindReversalPattern_出金叉后_生成最低点及历史数据.py 
+  3.FindReversalPattern_出死叉后_生成最高点及历史数据.py 
+  4.FindReversalPattern_出死叉后_根据最高点跌幅判断反转.py 
 ```  
 
-### 2.XX模式（reversal）  
-+ ***存放生成XX模式图像的程序***  
+### 2.市场轮廓图（TPO）  
++ ***存放生成TPO图像的程序***  
 ```
-  1.XX.py 
-  2.XX.py 
+  1.GetTPOImage.py 
+  2.data.py 
+  3.绘制市场轮廓图demo.py 
 ```  
 
 ## 二、Helper 
