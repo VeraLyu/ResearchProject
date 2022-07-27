@@ -15,15 +15,15 @@ from Helper import ZipHelper
 
 """"
 # 寻找反转模式
-# 目标：出死叉后，找到死叉区间内的最高点，判断最高点后chgDayCount日最大跌幅是否达到预期，达到预期则选出来
-# 1. ma10 连续在 ma20 上 n 天后，首次出现交叉，获取这样的区间数据（不包含交叉当天）
-# 2. 在交叉日区间中，找到最高点对应的日期
-# 3. 从最高点向未来取p个交易日，判断从最高位起，跌幅是否达到x%，若达到则为所求
-# 4. 从最高点向前取 m 个交易日
+# 目标：出金叉后，找到金叉区间内最低点，判断最低点后chgDayCount日最大涨幅是否达到预期，达到预期则选出来
+# 1. ma10 连续在 ma20 下 n 天后，首次出现交叉，获取这样的区间数据（不包含交叉当天）
+# 2. 在交叉日区间中，找到最低点对应的日期
+# 3. 从最低点向未来取p个交易日，判断从最低位起，涨幅是否达到x%，若达到则为所求
+# 4. 从最低点向前取 m 个交易日
 # 5. 记录股票代码、日期区间、价格区间，输出区间数据的图像
 
 # 后续改进：
-目标：出现死叉后，找到死叉出现之后的n日最大跌幅是否达到预期，达到预期则选出来
+目标：出现金叉后，找到金叉出现之后的n日最大涨幅是否达到预期，达到预期则选出来
 # 1.在交叉日期后，向后取 m 个交易日
 # 2.若连续 m 天 ma10 < ma20，即为所求
 """
@@ -76,7 +76,7 @@ def GetStockMA(stockCode, period=1401, maPara=[10, 20], calDay=100, type="D", be
 
 # 判断反转模式
 def FindReversal(stockMA, reversalDay=8, chgDayCount=5, pchg=0.15):
-    # 连续趋势计数，从最近一次金叉开始计数
+    # 连续趋势计数，从最近一次死叉开始计数
     compareCount = 0
     # 全局循环计数器
     globleCount = 0
@@ -90,30 +90,30 @@ def FindReversal(stockMA, reversalDay=8, chgDayCount=5, pchg=0.15):
     # 将整个有序字典转换成数组，方便后续根据下标取值
     dicToList = list(stockMA.values())
     for stockMAKey, stockMAValue in stockMA.items():
-        # 从首次上涨趋势开始时（出现金叉），记录本次趋势内序列
-        if float(stockMAValue["ma10"]) >= float(stockMAValue["ma20"]):
+        # 从首次下跌趋势开始时（出现死叉），记录本次趋势内序列
+        if float(stockMAValue["ma10"]) <= float(stockMAValue["ma20"]):
             seriesTdateList.append(stockMAValue["tdate"])
             seriesList.append([stockMAValue["open"],stockMAValue["high"],stockMAValue["low"],stockMAValue["close"]])
             compareCount += 1
-        # 遇到死叉本轮趋势终止，若本轮上涨趋势满足趋势时长，在orderDic添加本轮趋势序列（默认不记录交叉当天信息，若记录交叉当天信息，在此处添加即可）
-        if float(stockMAValue["ma10"]) < float(stockMAValue["ma20"]):
+        # 遇到金叉本轮趋势终止，若本轮下跌趋势满足趋势时长，在orderDic添加本轮趋势序列（默认不记录交叉当天信息，若记录交叉当天信息，在此处添加即可）
+        if float(stockMAValue["ma10"]) > float(stockMAValue["ma20"]):
             if compareCount > reversalDay:
-                # 寻找区间最高点K线对应收盘价的日期，在序列中的位置
+                # 寻找当前区间最低点K线对应收盘价的日期，在序列中的位置
                 featureList = np.array(seriesList)[:,3].tolist()
                 # 反转序列，以便找到featureList区间内最大值的位置下标
                 featureList.reverse()
-                maxIndex = featureList.index(max(featureList))
-                theIndex = len(featureList)-maxIndex-1
+                minIndex = featureList.index(min(featureList))
+                theIndex = len(featureList)-minIndex-1
                 
-                # 判断最高点向未来chgDayCount天是否越界
+                # 判断从最低点向未来取chgDayCount天是否越界
                 if (globleCount - (len(featureList) - theIndex) + chgDayCount) <= len(dicToList) - 1:
-                    # 从最高点向未来取chgDayCount个交易日收盘价，计入chgList，计算跌幅
+                    # 从最低点向未来取chgDayCount个交易日收盘价，计入chgList，计算跌幅
                     chgList = list()
                     for count in range(chgDayCount):
-                        # 找到最高点的位置，从最高点向未来取chgDayCount天的价格序列=(当前死叉日在全局中的坐标位置-当前记录的死叉区间长度+最高点在区间内的长度+i天)
-                        chgList.append(dicToList[globleCount - (len(featureList) - theIndex) + count]['close'])
-                    # 如果跌幅达标 只存储最高点及历史部分的序列
-                    if ((chgList[0] - min(chgList)) / chgList[0]) >= pchg:
+                        # 找到最低点的位置，从最低点向未来取chgDayCount天的价格序列=(当前金叉日在全局中的坐标位置-当前记录的金叉区间长度+最低点在区间内的长度+i天)
+                        chgList.append(dicToList[globleCount - len(featureList) + theIndex + count]['close'])
+                    # 如果涨幅达标 只存储最低点及历史部分的序列
+                    if ((max(chgList) - chgList[0]) / chgList[0]) >= pchg:
                         orderDic[stockMAValue["tdate"]] = {"tdateList":seriesTdateList[:theIndex+1], "seriesList":seriesList[:theIndex+1]}
             seriesTdateList = list()
             seriesList = list()
@@ -149,12 +149,12 @@ if __name__ == '__main__':
     chgCount = 8
     # 目标波动幅度
     pchg = 0.15
-    # 提取趋势区间长度偏移量，剔除最低点右侧数据后，序列提取长度应相对缩短
+    # 提取趋势区间长度偏移量，剔除最值点右侧数据后，序列提取长度应相对缩短
     reversalDayOffset = 5
     # 压缩文件源路径
-    dirPath = "..\\..\\..\\Communal\\ReversalNegative"
+    dirPath = "..\\..\\..\\Communal\\ReversalPositive"
     # 压缩文件生成路径
-    imgOutFullName = "..\\..\\..\\Communal\\ReversalNegative{0}.zip".format(time.strftime("%Y%m%d"))
+    imgOutFullName = "..\\..\\..\\Communal\\ReversalPositive{0}.zip".format(time.strftime("%Y%m%d"))
 
     # 获取股票池 上证50:000016.SH 沪深300:399300.SZ 上证180：000010.SH
     stockPoolList = GetStockPool('000016.SH')
@@ -164,7 +164,7 @@ if __name__ == '__main__':
             continue
         # 获取均线数据
         stockMADic = GetStockMA(code)
-        
+
         if dataCount > sampleCount:
             break
         elif stockMADic == False:
