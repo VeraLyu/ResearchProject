@@ -1,4 +1,3 @@
-# DataToImage()函数封装
 from operator import index
 import matplotlib.pyplot as plt
 import collections
@@ -100,8 +99,9 @@ def DrawTPOImage(baseDataList, extendData):
         topGroupCount += 1
         break
 
-    axes.set_xlabel('x轴', fontsize=20)  # 设置x轴标题
-    axes.set_ylabel('y轴', fontsize=20)  # 设置y轴标题
+    # 设置x,y轴标题
+    axes.set_xlabel('DateTime', fontsize=20)
+    axes.set_ylabel('Price', fontsize=20)
 
     axes.grid(axis='x')  # 设置仅显示x轴网格线
     plt.axis('off')  # 不显示坐标轴
