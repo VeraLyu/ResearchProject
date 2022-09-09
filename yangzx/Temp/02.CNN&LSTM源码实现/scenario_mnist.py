@@ -1,7 +1,5 @@
 """
-Created: May 2018
-@author: JerryX
-Find more at: https://www.zhihu.com/people/xu-jerry-82
+CNN数字识别
 """
 import numpy as np
 import logging.config
