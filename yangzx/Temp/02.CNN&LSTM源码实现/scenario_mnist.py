@@ -1,5 +1,5 @@
 """
-CNN数字识别
+CNN手写数字识别
 """
 import numpy as np
 import logging.config
@@ -235,16 +235,14 @@ def main():
             acc_t, loss_t = sess.train_steps(x, y_, lrt)
             iter += 1
             if (batch % 10 == 0):  # 10个batch show一次日志
-                logger.info("epoch %2d-%3d, loss= %.8f,acc_t= %.3f st[%.1f]" % (
-                    epoch, batch, loss_t, acc_t, s_t))
+                logger.info("epoch %2d-%3d, loss= %.8f,acc_t= %.3f st[%.1f]" % (epoch, batch, loss_t, acc_t, s_t))
 
             # 使用随机验证样本验证结果
             if (batch % Params.VAL_FREQ == 0 and (batch+epoch) >0):
                 x_v, y_v = mnist.getValData(Params.VALIDATION_CAPACITY)
                 y, loss_v,acc_v = sess.validation(x_v, y_v)
 
-                logger.info('epoch %2d-%3d, loss=%f, loss_v=%f, acc=%f, acc_v=%f' % (
-                    epoch, batch, loss_t, loss_v, acc_t, acc_v))
+                logger.info('epoch %2d-%3d, loss=%f, loss_v=%f, acc=%f, acc_v=%f' % (epoch, batch, loss_t, loss_v, acc_t, acc_v))
                 # 可视化记录
                 if (True == Params.SHOW_LOSS_CURVE):
                     view.addData(iter,loss_t, loss_v, acc_t, acc_v)

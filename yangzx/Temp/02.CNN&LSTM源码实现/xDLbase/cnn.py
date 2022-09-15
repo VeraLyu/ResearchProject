@@ -39,7 +39,7 @@ class ConvLayer(object):
         self.optimizerObj = optimizerCls(optmParams, dataType)
         self.dataType = dataType
         self.init_w = init_w
-        # 卷积层权重矩阵 (输出通道，输入通道，卷积核长，卷积核高)
+        # 卷积层对应的卷积核(权重矩阵)shape(输出通道，输入通道，卷积核长，卷积核高)，卷积层没有权重矩阵
         self.w = init_w * np.random.randn(o_depth, channel, f_size, f_size).astype(self.dataType)
         self.b = np.zeros((o_depth, 1), dtype=dataType)
         self.out = []
@@ -67,8 +67,9 @@ class ConvLayer(object):
 
         return self.deltaPrev
 
-    # conv4dw,反向传播计算dw
-    # 以卷积层输出误差为卷积核，对卷计层输入做卷积，得到卷积层w的梯度
+    # conv4dw,反向传播计算卷积核的梯度dw，用于梯度下降优化器
+    # 以上一层反向传播输出的误差矩阵为卷积核w，本卷积层fp时上一层的输入input作为x，对二者做卷积运算x*w，即可得到卷积核w的梯度
+    # 由于x的2,3维和w的1,2,3维在训练中是有意义的，所以只对这些维进行乘积计算
     # 输入输出尺寸不变的过滤器 当s==1时，p=(f-1)/2
     # 入参:
     #     x规格: 根据x.ndim 判断入参的规格
@@ -90,34 +91,55 @@ class ConvLayer(object):
     # 返回: 卷积层加权输出(co-relation)
     #       conv : batch * depth_o * depth_i * output_size * output_size
     def conv4dw(self, x, w, output_size, b=0, strides=1, x_v=False):
+        # -1 x.shape(32, 32, 14, 14)
+        # -2 x.shape(32, 1, 28, 28)
         batches = x.shape[0]
         depth_i = x.shape[1]
-        filter_size = w.shape[2]  # 过滤器尺寸,对应卷积层误差矩阵尺寸
+        # -1 卷积核尺寸,对应卷积层误差矩阵尺寸，w.shape(32, 64, 14, 14)
+        # -2 卷积核尺寸,对应卷积层误差矩阵尺寸，w.shape(32, 32, 28, 28)
+        filter_size = w.shape[2]
         x_per_filter = filter_size * filter_size
         depth_o = w.shape[1]
 
         if False == x_v:  # 原始规格:
-            input_size = x.shape[2]  #
+            input_size = x.shape[2]
+            # p=2
             p = int(((output_size - 1) * strides + filter_size - input_size) / 2)  # padding尺寸
             if p > 0:  # 需要padding处理
+                # -1 x.shape(32, 32, 14, 14) -> x_pad.shape(32, 32, 14+2+2, 14+2+2)
+                # -2 x.shape(32, 1, 28, 28) -> x_pad.shape(32, 1, 28+2+2, 28+2+2)
                 x_pad = Tools.padding(x, p, self.dataType)
             else:
                 x_pad = x
             logger.debug("vec4dw begin..")
+            # 重构误差矩阵，后续与卷积核做乘法
+            # -1 对x_pad向量化x_col.shape(32, 32, 196, 25)
+            # -2 对x_pad向量化x_col.shape(32, 1, 784, 25)
             x_col = self.vectorize4convdw_batches(x_pad, filter_size, output_size, strides)
             logger.debug("vec4dw end..")
         else:  # x_col规格
             x_col = x
-
+        # 重构卷积核，后续与误差矩阵做乘法
+        # -1 w.shape(32, 64, 14, 14) -> w_row.shape(32, 64, 196)
+        # -2 w.shape(32, 32, 28, 28) -> w_row.shape(32, 32, 784)
         w_row = w.reshape(batches, depth_o, x_per_filter)
+        # 构建误差梯度conv矩阵，存储batch和channel维度下误差矩阵和卷积核乘积的结果
+        # -1 conv.shape(32, 32, 64, 25)
+        # -2 conv.shape(32, 1, 32, 25)
         conv = np.zeros((batches, depth_i, depth_o, (output_size * output_size)), dtype=self.dataType)
         logger.debug("conv4dw matmul begin..")
         for batch in range(batches):
             for col in range(depth_i):
+                # -1 conv[,].shape({<=32, <=32隐藏}, 64, 25) = w_row[].shape({<=32 隐藏}, 64, 196) * x_col[,].shape({<=32, <=32 隐藏}, 196, 25)
+                # -2 conv[,].shape({<=32, <=1隐藏}, 32, 25) = w_row[].shape({<=32 隐藏}, 32, 784) * x_col[,].shape({<=32, <=1 隐藏}, 784, 25)
                 conv[batch, col] = Tools.matmul(w_row[batch], x_col[batch, col])
-
+        # 以下为对误差梯度矩阵conv进行累加计算
+        # -1 conv.shape(32, 32, 64, 25) -> conv_sum(32, 64, 25)
+        # -2 conv.shape(32, 1, 32, 25) -> conv_sum(1, 32, 25)
         conv_sum = np.sum(conv, axis=0)
-        # transpose而不是直接reshape避免错位
+        # 这里的维度转换是为了反向传播中调转新生成的误差矩阵输入(depth_o)输出(channel)值
+        # -1 transpose而不是直接reshape避免错位，conv_sum(32, 64, 25) -> conv.shape(64, 32, 5, 5)
+        # -2 transpose而不是直接reshape避免错位，conv_sum(1, 32, 25) -> conv.shape(32, 1, 5, 5)
         conv = conv_sum.transpose(1, 0, 2).reshape(depth_o, depth_i, output_size, output_size)
 
         logger.debug("conv4dw matmul end..")
@@ -183,8 +205,8 @@ class ConvLayer(object):
             x_col = x
         # 1.将权重w.shape(32, 1, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(32, 25) 
         # 2.将权重w.shape(64, 32, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(64, 800)
-        # -1.(32, 64, 5, 5)(32, 1600)
-        # -2.(1, 32, 5, 5)(1, 800)
+        # -1.将权重w.shape(32, 64, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(32, 1600)
+        # -2.将权重w.shape(1, 32, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(1, 800)
         w_row = w.reshape(depth_o, x_col.shape[1])
         # 1.(32, 32, 28*28) 构建卷积输出shape，通道数为depth_o=32
         # 2.(32, 64, 14*14) 构建卷积输出shape，通道数为depth_o=64
@@ -296,7 +318,7 @@ class ConvLayer(object):
         # -2.w.shape(32, 1, 5, 5)
         f_size = w.shape[2]
 
-        # w翻转180度,先上下翻转，再左右翻转，然后前两维互换实现高维转置
+        # 卷积核w翻转180度(先上下翻转，再左右翻转)，然后前两维互换实现多通道卷积核的“高维转置”（参考卷积求导原理）
         # -1.(64, 32, 5, 5) 
         # -2.(32, 1, 5, 5)
         w_rtUD = w[:, :, ::-1]  
@@ -305,17 +327,19 @@ class ConvLayer(object):
         # -2.w_rt.shape(1, 32, 5, 5)  w_rtLR(32, 1, 5, 5)
         w_rt = w_rtLR.transpose(1, 0, 2, 3)  
 
-        # 误差项传递
+        # 卷积层误差反向传播：误差矩阵向上反向传递，将卷积核180度反转后与误差矩阵做卷积运算即可
         # -1.d_o.shape(32, 64, 14, 14) w_rt.shape(32, 64, 5, 5) d_i.shape(32, 32, 14, 14) input_size=14
         # -2.d_o.shape(32, 32, 28, 28) w_rt.shape(1, 32, 5, 5) d_i.shape(32, 1, 28, 28) input_size=28
         d_i = self.conv_efficient(d_o, w_rt, 0, input_size, vec_idx_key, 1)
         logger.debug("d_i ready..")
 
-        # 每个d_o上的误差矩阵相加
+        # 下面计算梯度用于优化器optimizers
+        # 计算偏置b的梯度，每个d_o上的误差矩阵相加，分别先后对误差数组第3、2、0列求和，然后转换为shape为n行1列
         # -1.d_o.shape(32, 64, 14, 14) -> db.shape(64, 1)
         # -2.d_o.shape(32, 32, 28, 28) -> db.shape(32, 1)
         db = np.sum(np.sum(np.sum(d_o, axis=-1), axis=-1), axis=0).reshape(-1, 1)
         logger.debug("db ready.. %f s" % (time.time() - st))
+        # 计算卷积核w的梯度
         # -1.input.shape(32, 32, 14, 14),d_o.shape(32, 64, 14, 14),f_size=5 dw.shape(64, 32, 5, 5),x_col(32, 32, 196, 25)
         # -2.input.shape(32, 1, 28, 28),d_o.shape(32, 32, 28, 28),f_size=5 dw.shape(32, 1, 5, 5),x_col(32, 1, 784, 25)
         dw, x_col = self.conv4dw(input, d_o, f_size, 0, 1, False)
