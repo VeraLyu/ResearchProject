@@ -113,13 +113,13 @@ class ConvLayer(object):
                 x_pad = x
             logger.debug("vec4dw begin..")
             # 重构误差矩阵，后续与卷积核做乘法
-            # -1 对x_pad向量化x_col.shape(32, 32, 196, 25)
-            # -2 对x_pad向量化x_col.shape(32, 1, 784, 25)
+            # -1 对x_pad向量化x_pad.shape(32, 32, 18, 18) -> x_col.shape(32, 32, 196, 25)
+            # -2 对x_pad向量化x_pad.shape(32, 1, 32, 32) -> x_col.shape(32, 1, 784, 25)
             x_col = self.vectorize4convdw_batches(x_pad, filter_size, output_size, strides)
             logger.debug("vec4dw end..")
         else:  # x_col规格
             x_col = x
-        # 重构卷积核，后续与误差矩阵做乘法
+        # 卷积核向量化，方便后续与误差矩阵做乘法
         # -1 w.shape(32, 64, 14, 14) -> w_row.shape(32, 64, 196)
         # -2 w.shape(32, 32, 28, 28) -> w_row.shape(32, 32, 784)
         w_row = w.reshape(batches, depth_o, x_per_filter)
@@ -145,7 +145,7 @@ class ConvLayer(object):
         logger.debug("conv4dw matmul end..")
         return conv, x_col
 
-    # conv_efficient,使用向量化和BLAS优化的卷积计算版本
+    # conv_efficient,对误差矩阵使用向量化和BLAS优化，然后用矩阵相乘实现卷积计算
     # 入参:
     #     x:前向传播时表示输入矩阵，反向传播时表示误差矩阵
     #     x规格: 根据x.ndim 判断入参的规格
@@ -192,10 +192,10 @@ class ConvLayer(object):
                 x_pad = x
             #st = time.time()
             #logger.debug("vecting begin..")
-            # 使用向量化和BLAS优化的卷积计算，可以根据自己的硬件环境，在三种优化方式中选择较快的一种
+            # 使用向量化和BLAS优化，将卷积块展开成一维向量，后续可以将卷积运算转换成两个大矩阵的乘积运算
             # 1.filter=5，output=28,x_pad.shape(32, 1, 32, 32)  => (32, 1*5*5, 28*28)  = x_col.shape(32, 25, 784) 
             # 2.filter=5，output=14,x_pad.shape(32, 32, 18, 18) => (32, 32*5*5, 14*14) = x_col.shape(32, 800, 196)
-            # -1.filter=5，output=28,x_pad.shape(32, 64, 18, 18)  => (32, 64*5*5, 1*14)  = x_col.shape(32, 1600, 196)
+            # -1.filter=5，output=28,x_pad.shape(32, 64, 18, 18)  => (32, 64*5*5, 14*14)  = x_col.shape(32, 1600, 196)
             # -2.filter=5，output=28,x_pad.shape(32, 32, 32, 32)  => (32, 32*5*5, 28*28)  = x_col.shape(32, 800, 784)
             x_col = self.vectorize4conv_batches(x_pad, filter_size, output_size, strides)
             #x_col = spd.vectorize4conv_batches(x_pad, filter_size, output_size, strides)
@@ -203,6 +203,7 @@ class ConvLayer(object):
             #logger.debug("vecting end.. %f s" % (time.time() - st))
         else:  # x_col规格
             x_col = x
+        # 上面将输入x进行了向量化转换，这里对卷积核权重矩阵w也做类似转换，用于后续计算
         # 1.将权重w.shape(32, 1, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(32, 25) 
         # 2.将权重w.shape(64, 32, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(64, 800)
         # -1.将权重w.shape(32, 64, 5, 5)转化为与卷积结果x_col对应的维度，方便计算，w_row.shape(32, 1600)
@@ -215,7 +216,7 @@ class ConvLayer(object):
         conv = np.zeros((batches, depth_o, (output_size * output_size)), dtype=self.dataType)
         st1 = time.time()
         logger.debug("matmul begin..")
-        #不广播，提高处理效率
+        #不广播，提高处理效率，通道转换方法
         for batch in range(batches):
             # 1.conv.shape(32, 32, 784) = {32, [(32, 25)*(25, 784)+(32, 1)]}  
             # 2.conv.shape(32, 64, 196) = {32, [(64, 800)*(800, 196)+(64,1)]}
@@ -231,7 +232,7 @@ class ConvLayer(object):
         conv_return = conv.reshape(batches, depth_o, output_size, output_size)
         return conv_return
 
-    # vectorize4convdw_batches:用于反向传播计算dw的向量化
+    # vectorize4convdw_batches:dw张量的向量化，方便后续反向传播计算
     # ------------------------------------
     # 入参
     #    x : padding后的实例 batches * channel * conv_i_size * conv_i_size

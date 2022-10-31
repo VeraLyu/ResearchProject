@@ -68,7 +68,7 @@ class FCLayer(object):
         # self.deltaOri = deltaOri_reshaped if self.needReshape is False else deltaOri_reshaped.reshape(self.shapeOfOriIn)
         # 将误差矩阵与上一层权重矩阵的转置做乘法，可将误差反向传播至上一层
         self.bpDelta()
-        # 通过优化器对反向传播进行梯度优化
+        # 通过优化器对权重矩阵w和偏置b进行梯度下降更新
         self.bpWeights(input, lrt)
         return self.deltaPrev
 
@@ -83,9 +83,9 @@ class FCLayer(object):
     # 计算反向传播权重梯度w,b
     def bpWeights(self, input, lrt):
         # dw = Tools.matmul(input.T, self.deltaOri)
-        # inputReshaped是正向传播时上层网络传到本层的输入矩阵，deltaOri是本层反向传播激活函数求导后的误差矩阵
+        # inputReshaped是正向传播时上层网络传到本层的输入矩阵，deltaOri是本层反向传播激活函数求导后的误差矩阵，dw用于后续对w梯度优化
         dw = Tools.matmul(self.inputReshaped.T, self.deltaOri)
-        # 误差矩阵deltaOri.shape->(32,10),进行sum计算后将32个sample向量对应位置求和后db.shape->(1,10)，再reshape成b.shape用于后续梯度优化
+        # 误差矩阵deltaOri.shape->(32,10),进行sum计算后将32个sample向量对应位置求和后db.shape->(1,10)，再reshape成b.shape，db用于后续对b梯度优化
         db = np.sum(self.deltaOri, axis=0, keepdims=True).reshape(self.b.shape)
         # 当前层网络权重(w,b)元组
         weight = (self.w,self.b)

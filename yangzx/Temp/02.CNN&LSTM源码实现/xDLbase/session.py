@@ -35,7 +35,7 @@ class Session(object):
 
         # 前向传播
         if False == val:
-            # self.layers包含两部分，第一部分是3个lstm层，第二部分是全连接层
+            # self.layers包含两部分，第一部分是CNN层，第二部分是全连接层
             for layer in self.layers:
                 # 此处返回的dataLayer是上一个网络层输出的状态h，作为下一个网络层的输入
                 dataLayer = layer.fp(dataLayer)
